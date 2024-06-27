@@ -353,7 +353,6 @@ class Marco_productos extends JFrame{
 
             JLabel texto_existencias = new JLabel("Existencias");
             campo_existencias = new JTextField(10);
-            campo_existencias.getDocument().addDocumentListener(new Comprueba_existencias());
 
             
 
@@ -550,13 +549,18 @@ class Marco_productos extends JFrame{
 
             private void comprobarCodigo(){
      
-                String codigo = campo_codigo.getText();
-                if (codigo.length()<=20) {
+                try {
+                    int codigo = Integer.valueOf(campo_codigo.getText());
+                    if (codigo>0) {
+                        
+                    } else {
+                        JOptionPane.showMessageDialog(null, "el codigo no puede ser numeros negativos");
+                    }
                     
-                } else {
-                    JOptionPane.showMessageDialog(null, "El codigo no puede estar vacio o superar 20 carcateres");
-                }
+                } catch (NumberFormatException ex) {
                     
+                    JOptionPane.showMessageDialog(null, "el codigo tiene que ser un numero positivo");
+                }    
                 
             }
             
@@ -593,41 +597,7 @@ class Marco_productos extends JFrame{
             
         }
 
-        public class Comprueba_existencias implements DocumentListener{
-
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                comprobarExistencias(); 
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                //comprobarExistencias();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                
-            }
-
-            private void comprobarExistencias(){
-     
-                try {
-                    int existencias = Integer.valueOf(campo_existencias.getText());
-                    if (existencias>0) {
-                        
-                    } else {
-                        JOptionPane.showMessageDialog(null, "Las existencias no puede ser numeros negativos");
-                    }
-                    
-                } catch (NumberFormatException ex) {
-                    
-                    JOptionPane.showMessageDialog(null, "Las existencias tiene que ser un numero positivo");
-                }                    
-                
-            }
-            
-        }
+       
 
         public class Comprueba_descripcion implements DocumentListener{
 
@@ -808,8 +778,9 @@ class Marco_productos extends JFrame{
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                
-                if (campo_categoria.getSelectedItem().toString().equals("Seleccionar")) {
+                if (!buscarCodigo()==true) {
+                    JOptionPane.showMessageDialog(null,"Codigo en uso");
+                }else if (campo_categoria.getSelectedItem().toString().equals("Seleccionar")) {
                     JOptionPane.showMessageDialog(null,"Seleccionar no es valido");
                 }else if(campo_codigo.getText().isEmpty()){
                     JOptionPane.showMessageDialog(null,"El codigo no puede ir vacio");
@@ -841,7 +812,6 @@ class Marco_productos extends JFrame{
                         }
                         con.close();
                     } catch (Exception ex) {
-                        String codigo = campo_codigo.getText();
                         double precio = Double.valueOf(campo_precio.getText());
                         String nombre = campo_nombre.getText();
                         try {
@@ -851,11 +821,10 @@ class Marco_productos extends JFrame{
                         } catch (Exception ee) {
                             System.err.println(ee); 
                             JOptionPane.showMessageDialog(null, "Las exitencias tiene un limite de 2,147,483,647 numeros enteneros\n");
+                            JOptionPane.showMessageDialog(null, "El codigo tiene un limite de 2,147,483,647 numeros enteneros\n");
                         }
                         
-                        if(codigo.length()>20){
-                            JOptionPane.showMessageDialog(null, "El codigo tiene "+(codigo.length()-20) +" caractere(s) de mas ");
-                        }else if(precio<0.01||precio>99999999.99){
+                        if(precio<0.01||precio>99999999.99){
                             JOptionPane.showMessageDialog(null, "El precio tiene que estar entren 0.01 y 99,999,999.99");
                         }else if(nombre.length()>45){
                             JOptionPane.showMessageDialog(null, "El nombre tiene "+(nombre.length()-45)+" caractere(s) de mas ");
@@ -867,6 +836,39 @@ class Marco_productos extends JFrame{
             }
             
         }
+
+        
+        public boolean buscarCodigo(){
+            Connection con = null;
+                ResultSet rs = null;
+                PreparedStatement ps = null;
+                
+                try {
+                    con = getConexion();
+                    ps = con.prepareStatement("SELECT * FROM productos where Codigo_P = ?");
+                    ps.setString(1, campo_codigo.getText());
+                    rs = ps.executeQuery();
+                    
+                    
+                    if(rs.next()){     
+                        return false;
+                    }else{
+                        return true;
+                    }
+    
+
+                } catch (SQLException ex) {
+                    System.err.println(ex);
+                    return true;
+                    
+                }finally{
+                    try {
+                        con.close();
+                    } catch (SQLException ex) {
+                        System.err.println(ex);
+                    }
+                }
+            }
 
         public void buscar(String name_boton,String acccion){
             campos_actualizar.clear();
@@ -959,76 +961,87 @@ class Marco_productos extends JFrame{
         
 
         public class BotonEditarProducto implements ActionListener{
-    
+            
             
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (campo_categoria2.getSelectedItem().toString().equals("Seleccionar")) {
-                    JOptionPane.showMessageDialog(null,"Seleccionar no es valido");
-                }else if(campo_codigo2.getText().isEmpty()){
-                    JOptionPane.showMessageDialog(null,"El codigo no puede ir vacio");
-                }else if(campo_nombre2.getText().isEmpty()){
-                    JOptionPane.showMessageDialog(null,"El nombre no puede ir vacio");
-                }else if(campo_precio2.getText().isEmpty()){
-                    JOptionPane.showMessageDialog(null,"El precio no puede ir vacio");
-                }else if(campo_existencias2.getText().isEmpty()){
-                    JOptionPane.showMessageDialog(null,"Las existencias no pueden ir vacias");
-                }else {
-                    Connection con = null;
-                    PreparedStatement ps = null;
-                    try {
-                    
-                    con = getConexion();
-                    ps = con.prepareStatement("UPDATE productos set Codigo_p = ?,Nombre_p = ?,Descripcion_p = ?, Precio_p = ?,Existencias_p = ?, Categoria_p = ? WHERE idProductos = ?");
-                    ps.setString(1, campo_codigo2.getText());
-                    ps.setString(2, campo_nombre2.getText());
-                    ps.setString(3, campo_descripcion2.getText());
-                    ps.setDouble(4,Double.parseDouble(campo_precio2.getText()));
-                    ps.setInt(5, Integer.parseInt(campo_existencias2.getText()));
-                    ps.setString(6, campo_categoria2.getSelectedItem().toString());
-                    ps.setInt(7,Integer.parseInt(campo_id.getText()));
+                int resultado= JOptionPane.showConfirmDialog(null, "¿Estas seguro de editar?", "Editar", JOptionPane.YES_NO_OPTION);
+
+                if(resultado==JOptionPane.YES_OPTION){
+                    if (campo_categoria2.getSelectedItem().toString().equals("Seleccionar")) {
+                        JOptionPane.showMessageDialog(null,"Seleccionar no es valido");
+                    }else if(campo_codigo2.getText().isEmpty()){
+                        JOptionPane.showMessageDialog(null,"El codigo no puede ir vacio");
+                    }else if(campo_nombre2.getText().isEmpty()){
+                        JOptionPane.showMessageDialog(null,"El nombre no puede ir vacio");
+                    }else if(campo_precio2.getText().isEmpty()){
+                        JOptionPane.showMessageDialog(null,"El precio no puede ir vacio");
+                    }else if(campo_existencias2.getText().isEmpty()){
+                        JOptionPane.showMessageDialog(null,"Las existencias no pueden ir vacias");
+                    }else {
+                        Connection con = null;
+                        PreparedStatement ps = null;
+                        try {
                         
-                    int res = ps.executeUpdate();
-        
-                    if (res>0) {
-                        JOptionPane.showMessageDialog(null, "Producto Modificado");
-                        panel_Actualizar.removeAll();
+                        con = getConexion();
+                        ps = con.prepareStatement("UPDATE productos set Codigo_p = ?,Nombre_p = ?,Descripcion_p = ?, Precio_p = ?,Existencias_p = ?, Categoria_p = ? WHERE idProductos = ?");
+                        ps.setString(1, campo_codigo2.getText());
+                        ps.setString(2, campo_nombre2.getText());
+                        ps.setString(3, campo_descripcion2.getText());
+                        ps.setDouble(4,Double.parseDouble(campo_precio2.getText()));
+                        ps.setInt(5, Integer.parseInt(campo_existencias2.getText()));
+                        ps.setString(6, campo_categoria2.getSelectedItem().toString());
+                        ps.setInt(7,Integer.parseInt(campo_id.getText()));
+                            
+                        int res = ps.executeUpdate();
+            
+                        if (res>0) {
+                            JOptionPane.showMessageDialog(null, "Producto Modificado");
+                            panel_Actualizar.removeAll();
+                            limpiar_panel_central();
+                            buscar("Editar","SELECT * FROM productos");
+                            panel_superior.add(panel_buscar,BorderLayout.EAST);
+                            add(panel_Actualizar, BorderLayout.CENTER);
+                            revalidate();
+                            repaint();
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Error al modificar");
+                        }
+                        con.close();
+                        }catch(Exception ex) {
+                            double precio = Double.valueOf(campo_precio2.getText());
+                            String nombre = campo_nombre2.getText();
+                            try {
+                              int existencias = Integer.valueOf(campo_existencias2.getText());   
+                              if (existencias<0) {
+                              }
+                            } catch (Exception ee) {
+                                System.err.println(ee); 
+                                JOptionPane.showMessageDialog(null, "El codigo tiene un limite de 2,147,483,647 numeros enteneros\n");
+                                JOptionPane.showMessageDialog(null, "Las exitencias tiene un limite de 2,147,483,647 numeros enteneros\n");
+                            }
+                            
+                           if(precio<0.01||precio>99999999.99){
+                                JOptionPane.showMessageDialog(null, "El precio tiene que estar entren 0.01 y 99,999,999.99");
+                            }else if(nombre.length()>45){
+                                JOptionPane.showMessageDialog(null, "El nombre tiene "+(nombre.length()-45)+" caractere(s) de mas ");
+                            }
+                            System.err.println(ex); 
+                        }finally{
+                            
+                            
+                        }
+                    }
+                } else{
+                    panel_Actualizar.removeAll();
                         limpiar_panel_central();
                         buscar("Editar","SELECT * FROM productos");
                         panel_superior.add(panel_buscar,BorderLayout.EAST);
                         add(panel_Actualizar, BorderLayout.CENTER);
                         revalidate();
                         repaint();
-                    } else {
-                        JOptionPane.showMessageDialog(null, "Error al modificar");
-                    }
-                    con.close();
-                    }catch(Exception ex) {
-                        String codigo = campo_codigo2.getText();
-                        double precio = Double.valueOf(campo_precio2.getText());
-                        String nombre = campo_nombre2.getText();
-                        try {
-                          int existencias = Integer.valueOf(campo_existencias2.getText());   
-                          if (existencias<0) {
-                          }
-                        } catch (Exception ee) {
-                            System.err.println(ee); 
-                            JOptionPane.showMessageDialog(null, "Las exitencias tiene un limite de 2,147,483,647 numeros enteneros\n");
-                        }
-                        
-                        if(codigo.length()>20){
-                            JOptionPane.showMessageDialog(null, "El codigo tiene "+(codigo.length()-20) +" caractere(s) de mas ");
-                        }else if(precio<0.01||precio>99999999.99){
-                            JOptionPane.showMessageDialog(null, "El precio tiene que estar entren 0.01 y 99,999,999.99");
-                        }else if(nombre.length()>45){
-                            JOptionPane.showMessageDialog(null, "El nombre tiene "+(nombre.length()-45)+" caractere(s) de mas ");
-                        }
-                        System.err.println(ex); 
-                    }finally{
-                        
-                        
-                    }
-                }
+                }  
+                
             }
 
         }
@@ -1096,10 +1109,14 @@ class Marco_productos extends JFrame{
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                limpiar_panel_central();
-                eliminarUno(id);
-                revalidate();
-                repaint();
+                int resultado= JOptionPane.showConfirmDialog(null, "¿Estas seguro de eliminar?", "Eliminar", JOptionPane.YES_NO_OPTION);
+                if(resultado==JOptionPane.YES_OPTION){
+                    limpiar_panel_central();
+                    eliminarUno(id);
+                    revalidate();
+                    repaint();
+                }
+                
             }
             
         }
